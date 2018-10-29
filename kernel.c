@@ -28,6 +28,9 @@ struct pcb *running[MAX_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL, NULL};
 
 int high_priority = 0;
 
+struct MQ_T MQ_list[MAX_PROCS]; // this is our list of message queues. each queue can be bound to a specific process
+// by calling bind()
+
 
 int llCount = 0; // the number of items in our linked list (used for debugging purposes)
 
@@ -214,7 +217,7 @@ void k_terminater()
         free(running[high_priority]);
         running[high_priority] = NULL;
     }
-    else{
+    else{ // if its not the last priority, we'll need to fix the connection of the leftover adjacent nodes
 
        if(running[high_priority] != ll_head[high_priority]){
            running[high_priority]->prev->next = running[high_priority]->next;
@@ -243,13 +246,23 @@ void k_terminater()
     // note: the registers are then restored in SVCall
 }
 
-void k_nice_caller()
+void k_nice(int new_priority)// here is where we will remove the running PCB from the current priority linked list, and tack it onto the end of another list
 {
 
+    struct pcb *temp; // used when fixing the connections of our linked lists
 
 
 }
 
+void k_bind(int indx)
+{
+    if(MQ_list[indx].avail == TRUE){
+        MQ_list[indx].avail = FALSE;
+        MQ_list[indx].owner = running[high_priority]->id;
+    }
+
+
+}
 
 
 

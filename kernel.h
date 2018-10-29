@@ -18,6 +18,8 @@ void start();
 #define DISPLAYTBL_LEN2          90
 #define MAX_ENTRIES     4 // this is the number of different unique prcesses types in our table (proc1, proc2, proc3)
 
+#define MAX_PROCS       10 // the max number of processes thst can be run at once
+
 #define MONq    0 // these are used to indicate what Q to enter
 #define UARTq    1
 
@@ -116,6 +118,33 @@ struct pcb
     struct pcb *prev;
 };
 
+/*
+ *
+ *
+ *      Message Passing Structures
+ *
+ *
+ * */
+
+struct MQ_Item
+{
+    char msg; /*  not sure what data type this needs to be */
+    int src; /* senders process id*/
+    int size;
+};
+
+struct MQ_T
+{
+    struct MQ_Item *tail; // indicates the last item in the message queue
+    struct MQ_Item *head; // indicates the first item in the message queue
+
+    int avail;
+    int owner;
+
+
+};
+
+
 
 /* linked list stuff */
 //actual linked list
@@ -132,7 +161,8 @@ extern int high_priority;
 
 
 void k_terminater();
-void k_nice_caller();
+void k_nice(int new_priority);
+void k_bind(int indx);
 
 
 

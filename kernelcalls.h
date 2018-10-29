@@ -8,7 +8,7 @@
 #ifndef KERNELCALLS_H_
 #define KERNELCALLS_H_
 
-enum kernelcallcodes {GETID, NICE, TERMINATE};
+enum kernelcallcodes {GETID, NICE, TERMINATE, BIND};
 
 struct kcallargs
 {

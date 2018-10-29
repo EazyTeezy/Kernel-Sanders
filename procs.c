@@ -163,6 +163,7 @@ void p_nice(int incr)
 
     volatile struct kcallargs niceArg; /* Volatile to actually reserve space on stack*/
     niceArg.code = NICE;
+    niceArg.arg1 = incr;
 
     /* Assign address of getidarg to R7 */
     p_assignR7((unsigned long) &niceArg);
@@ -170,6 +171,22 @@ void p_nice(int incr)
     SVC();
 
 }
+
+void p_bind(int index)
+{
+
+    volatile struct kcallargs bindArg; /* Volatile to actually reserve space on stack*/
+    bindArg.code = NICE;
+    bindArg.arg1 = index;
+
+    /* Assign address of getidarg to R7 */
+    p_assignR7((unsigned long) &bindArg);
+
+    SVC();
+
+}
+
+
 
 void p_assignR7(volatile unsigned long data)
 {
