@@ -21,8 +21,13 @@
 /* here is where the 3 different process table entries are built */
 struct fentry flist[MAX_ENTRIES] = {{proc1, "P1", 8}, {proc2, "P2", 8}, {proc3, "P3", 8}, {idle_proc, "IDL", 8}};
 
-struct pcb *running = NULL;
-struct pcb *ll_head = NULL;
+//struct pcb *running = NULL;
+//struct pcb *ll_head = NULL;
+struct pcb *ll_head[MAX_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL, NULL};
+struct pcb *running[MAX_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL, NULL};
+
+int high_priority = 0;
+
 
 int llCount = 0; // the number of items in our linked list (used for debugging purposes)
 
@@ -30,7 +35,7 @@ void reg_proc(char * prc, int pri, int pID){ // this is our argument)
 
     int j = 0; // used when searching unique processes table for matching name
     int i = 0; // used when outputting the matched process name
-    char displayStr[14] = "added to list"; // sending in a '\n' here messes everything up with p1
+    char displayStr[23] = "\nProcess Registered..."; // sending in a '\n' here messes everything up with p1
 
     int prcMatch = FALSE; // used as a flag to indicate if a correct process name was found
 
@@ -50,12 +55,10 @@ void reg_proc(char * prc, int pri, int pID){ // this is our argument)
     }
     else { // at this point wehave a valid process name. this is where we will do reg proc stuff
 
-        while(i < strlen(displayStr)){ // outputs added to list
+        while(i < strlen(displayStr)){ // outputs "Process Registered..."
             send_msg(displayStr[i], MONsrc, UARTq); // says yo we got it
             i++;
         }
-
-        send_msg('\n', MONsrc, UARTq);
 
         createPCB(j, pri, pID); // send in function pointer here
 
@@ -65,7 +68,7 @@ void reg_proc(char * prc, int pri, int pID){ // this is our argument)
 }
 
 void start(){
-    running = running->next;
+    running[high_priority] = running[high_priority]->next; // shifts our running pcb to the right, meaning the first entered process is the first to run
 
    // printList();
     // here we will start the first process
@@ -106,25 +109,29 @@ void createPCB(int whichPrc, int pr, int id) {
     newPCB->next = NULL;
     newPCB->prev = NULL;
 
-    addPCB(newPCB);
+    addPCB(newPCB, pr);
 }
 
 
-void addPCB(struct pcb *PCB) {
+void addPCB(struct pcb *PCB, int prio) {
+
+    if(prio > high_priority)
+        high_priority = prio;
+
     //empty condition
-    if (running == NULL) {
-        running = PCB;
-        running->next = running ->prev = running;
-        ll_head = running;
+    if (running[prio] == NULL) {
+        running[prio] = PCB;
+        running[prio]->next = running[prio] ->prev = running[prio];
+        ll_head[prio] = running[prio];
         //printf("henlo\n");
     }
     else {
-        PCB->next = ll_head;
-        PCB->prev = running;
-        running->next = PCB;
-        ll_head->prev = PCB;
+        PCB->next = ll_head[prio];
+        PCB->prev = running[prio];
+        running[prio]->next = PCB;
+        ll_head[prio]->prev = PCB;
        // running->prev= PCB;
-        running = PCB;
+        running[prio] = PCB;
         //printf("frenn\n");
     }
 }
@@ -202,43 +209,38 @@ void k_terminater()
 
     struct pcb *temp;
 
-
-    if(running != ll_head){
-        running->prev->next = running->next;
-        running->next->prev = running ->prev;
-
+    if(running[high_priority]->next == running[high_priority]){ // check to see if this is the priorities last process being killed
+        free(running[high_priority]->top_of_stack);
+        free(running[high_priority]);
+        running[high_priority] = NULL;
     }
     else{
-        //send_msg('x', MONsrc, UARTq);
-        ll_head->prev->next = running->next;
-        running->next->prev = ll_head->prev;
-        ll_head = running->next;
+
+       if(running[high_priority] != ll_head[high_priority]){
+           running[high_priority]->prev->next = running[high_priority]->next;
+           running[high_priority]->next->prev = running[high_priority] ->prev;
+       }
+       else{
+           ll_head[high_priority]->prev->next = running[high_priority]->next;
+           running[high_priority]->next->prev = ll_head[high_priority]->prev;
+           ll_head[high_priority] = running[high_priority]->next;
+       }
+
+       free(running[high_priority]->top_of_stack);
+       temp = running[high_priority];
+       running[high_priority] = temp->next;
+       free(temp);
     }
- free(running->top_of_stack);
-    temp = running;
 
 
-
-  //  struct pcb *temp = running;
-   // running = temp->next;
-  //  running = running->prev;
-    free(temp);
+    while(!running[high_priority]){ // if all processes at this priority have terminated, move down a priority until a non empty priority level is found
+            high_priority--;
+    }
 
     // we will set our new psp
-   // set_PSP((unsigned long)running->sp);
+    set_PSP((unsigned long)running[high_priority]->sp);
 
-        //finally lets restore our registers
-   // restore_registers();
-
-   // char strii[3];
-
-    //sprintf(strii, "%d", running->id);
-
-    //send_msg(strii[0], MONsrc, UARTq);
-
-  //  printList();
-   // send_msg('n', MONsrc, UARTq);
-
+    // note: the registers are then restored in SVCall
 }
 
 void k_nice_caller()
@@ -260,9 +262,9 @@ void k_nice_caller()
  *
  */
 
-void printList(void)
+void printList(void) // out of date, has not been update to handle priority list
 {
-    int i = 0; // facilitates sending the output strings
+  /*  int i = 0; // facilitates sending the output strings
     int k = 0; // facilitates moving to the next PCB
 
     char strA [300];
@@ -293,4 +295,5 @@ void printList(void)
 
          k++;
      }
+     */
 }

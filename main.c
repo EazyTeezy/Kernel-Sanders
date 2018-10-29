@@ -33,14 +33,14 @@ int main(void)
 
    // reg_proc("P1", PRIORITY1, 1); // the x is just to fill in the priority section for now
 
-    reg_proc("P2", PRIORITY1, 2);
+    reg_proc("P2", PRIORITY2, 2);
 
-    reg_proc("P3", PRIORITY1, 3);
- //reg_proc("P2", PRIORITY1, 2);
- reg_proc("P1", PRIORITY1, 1);
-// reg_proc("P2", PRIORITY1, 2);
- //   reg_proc("P3", PRIORITY1, 3);
-    reg_proc("IDL", PRIORITY1, 4);
+    reg_proc("P3", PRIORITY2, 3);
+   // reg_proc("P1", PRIORITY5, 1);
+    reg_proc("P3", PRIORITY4, 3);
+    reg_proc("P2", PRIORITY4, 2);
+
+    reg_proc("IDL", IDLE_PRIORITY, 4);
 
     start(); // this will start the processes and run them. the kernel is also where other stuff will happen
 

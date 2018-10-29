@@ -28,8 +28,11 @@ void start();
 
 #define R0_OFFSET       8
 #define PC_OFFSET       14
-#define PSR_OFFSET       15
+#define PSR_OFFSET      15
 
+#define MAX_PRIORITIES  6
+
+#define IDLE_PRIORITY   0
 #define PRIORITY1       1
 #define PRIORITY2       2
 #define PRIORITY3       3
@@ -117,11 +120,14 @@ struct pcb
 /* linked list stuff */
 //actual linked list
 void createPCB(int whichPrc, int pr, int id);
-void addPCB(struct pcb*);
+void addPCB(struct pcb*, int prio);
 void printList(void);
 
 //global variable
-extern struct pcb *running;
+extern struct pcb *running[MAX_PRIORITIES];
+extern struct pcb *ll_head[MAX_PRIORITIES];
+
+extern int high_priority;
 
 
 
