@@ -88,7 +88,7 @@ void SVCHandler(struct stack_frame *argptr)
        should be increased by 8 * sizeof(unsigned int).
      * sp is increased because the stack runs from low to high memory.
     */
-        set_PSP((unsigned long)(running -> sp) + 8 * sizeof(unsigned int));
+        set_PSP((unsigned long)(running[high_priority] -> sp) + 8 * sizeof(unsigned int));
 
         firstSVCcall = FALSE;
         /* Start SysTick */
@@ -125,11 +125,14 @@ void SVCHandler(struct stack_frame *argptr)
         switch(kcaptr -> code)
         {
         case GETID:
-            kcaptr -> rtnvalue = running->id;
+            kcaptr -> rtnvalue = running[high_priority]->id;
+        break;
+        case BIND:
+            k_bind(kcaptr -> arg1);
         break;
         case NICE:
-            kcaptr -> rtnvalue = -1; // probably not -1. should nice return something?
-            k_nice_caller();
+        //    kcaptr -> rtnvalue = -1; // probably not -1. should nice return something?
+            k_nice(kcaptr -> arg1);
         break;
         case TERMINATE:
            // kcaptr -> rtnvalue = -1; // probably not -1. should terminate return something?

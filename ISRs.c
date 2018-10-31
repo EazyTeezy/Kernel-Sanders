@@ -152,13 +152,16 @@ void SysTickHandler(void)
     save_registers();
 
     //next we will put our currently running process in the appchange our stack pointer
-    running->sp = (struct stack_frame*)get_PSP();
+    running[high_priority]->sp = (struct stack_frame*)get_PSP();
 
     //now moving the running pointer to the next PCB
-    running = running->next;
+    running[high_priority] = running[high_priority]->next;
+
+
+
 
     // we will set our new psp
-    set_PSP((unsigned long)running->sp);
+    set_PSP((unsigned long)running[high_priority]->sp);
 
     //finally lets restore our registers
     restore_registers();

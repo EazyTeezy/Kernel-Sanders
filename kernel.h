@@ -18,6 +18,8 @@ void start();
 #define DISPLAYTBL_LEN2          90
 #define MAX_ENTRIES     4 // this is the number of different unique prcesses types in our table (proc1, proc2, proc3)
 
+#define MAX_PROCS       10 // the max number of processes thst can be run at once
+
 #define MONq    0 // these are used to indicate what Q to enter
 #define UARTq    1
 
@@ -28,8 +30,11 @@ void start();
 
 #define R0_OFFSET       8
 #define PC_OFFSET       14
-#define PSR_OFFSET       15
+#define PSR_OFFSET      15
 
+#define MAX_PRIORITIES  6
+
+#define IDLE_PRIORITY   0
 #define PRIORITY1       1
 #define PRIORITY2       2
 #define PRIORITY3       3
@@ -113,20 +118,51 @@ struct pcb
     struct pcb *prev;
 };
 
+/*
+ *
+ *
+ *      Message Passing Structures
+ *
+ *
+ * */
+
+struct MQ_Item
+{
+    char msg; /*  not sure what data type this needs to be */
+    int src; /* senders process id*/
+    int size;
+};
+
+struct MQ_T
+{
+    struct MQ_Item *tail; // indicates the last item in the message queue
+    struct MQ_Item *head; // indicates the first item in the message queue
+
+    int avail;
+    int owner;
+
+
+};
+
+
 
 /* linked list stuff */
 //actual linked list
 void createPCB(int whichPrc, int pr, int id);
-void addPCB(struct pcb*);
+void addPCB(struct pcb*, int prio);
 void printList(void);
 
 //global variable
-extern struct pcb *running;
+extern struct pcb *running[MAX_PRIORITIES];
+extern struct pcb *ll_head[MAX_PRIORITIES];
+
+extern int high_priority;
 
 
 
 void k_terminater();
-void k_nice_caller();
+void k_nice(int new_priority);
+void k_bind(int indx);
 
 
 

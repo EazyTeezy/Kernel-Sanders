@@ -21,9 +21,10 @@ void proc3();
 void idle_proc();
 
 // functions
-int get_id();
-void terminate();
+int p_get_id();
+void p_terminate();
+void p_nice(int incr);
 
-void assignR7(volatile unsigned long data);
+void p_assignR7(volatile unsigned long data);
 
 #endif /* PROCS_H_ */
