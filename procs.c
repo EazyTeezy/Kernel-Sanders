@@ -32,9 +32,9 @@ while(1){
         i = 0; // resets delay loop counter
 
  //  send_msg('x', MONsrc, UARTq);// send 1s
-        if(!nice_flag)
-         p_nice(1);
-       //  p_terminate();
+       if(!nice_flag)
+         p_nice(4);
+       // p_terminate();
     }
 
 }

@@ -130,7 +130,6 @@ void addPCB(struct pcb *PCB, int prio) {
         //printf("henlo\n");
     }
     else {
-        send_msg('z', MONsrc, UARTq);// send 1s
         PCB->next = ll_head[prio];
         PCB->prev = running[prio];
         running[prio]->next = PCB;
@@ -265,11 +264,10 @@ void k_nice(int new_priority)// here is where we will remove the running PCB fro
           while(!running[high_priority]) // if all processes at this priority have terminated, move down a priority until a non empty priority level is found
               high_priority--;
 
-        set_PSP((unsigned long)running[high_priority]->sp);
     }
     else{
         //Remove PCB from current priority queue
-       if(running[high_priority] != ll_head[high_priority]){
+       if(running[high_priority] != ll_head[high_priority]){ // if its not the last element in this priority
            running[high_priority]->prev->next = running[high_priority]->next;
            running[high_priority]->next->prev = running[high_priority] ->prev;
        }
@@ -278,7 +276,10 @@ void k_nice(int new_priority)// here is where we will remove the running PCB fro
            running[high_priority]->next->prev = ll_head[high_priority]->prev;
            ll_head[high_priority] = running[high_priority]->next;
        }
-       temp = running[high_priority] -> next;
+       if(high_priority >= new_priority)
+           temp = running[high_priority] -> next;
+       else
+           temp = running[high_priority];
 
        //Reset the previously linked list contents and assign current running process the SP
        running[high_priority]-> next = running[high_priority]->prev = NULL;
@@ -290,7 +291,7 @@ void k_nice(int new_priority)// here is where we will remove the running PCB fro
        free(temp);
     }
 
-
+    set_PSP((unsigned long)running[high_priority]->sp);
     //else {
         //send_msg('z', MONsrc, UARTq);// send 1s
       //  while(!running[high_priority]) // if all processes at this priority have terminated, move down a priority until a non empty priority level is found
