@@ -249,6 +249,9 @@ void k_terminater()
 
 void k_nice(int new_priority)// here is where we will remove the running PCB from the current priority linked list, and tack it onto the end of another list
 {
+    //trying to nice something to it's current priority - won't do anything
+    if(high_priority == new_priority)
+        return;
 
     struct pcb *temp; // used when fixing the connections of our linked lists
 
@@ -264,6 +267,7 @@ void k_nice(int new_priority)// here is where we will remove the running PCB fro
           while(!running[high_priority]) // if all processes at this priority have terminated, move down a priority until a non empty priority level is found
               high_priority--;
 
+          set_PSP((unsigned long)running[high_priority]->sp);
     }
     else{
         //Remove PCB from current priority queue
@@ -288,10 +292,12 @@ void k_nice(int new_priority)// here is where we will remove the running PCB fro
        addPCB(running[high_priority],new_priority);
        //point to the next item - stored as temp
        running[high_priority] = temp;
+       if(high_priority >= new_priority)
+           set_PSP((unsigned long)running[high_priority]->sp);
        free(temp);
     }
 
-    set_PSP((unsigned long)running[high_priority]->sp);
+
     //else {
         //send_msg('z', MONsrc, UARTq);// send 1s
       //  while(!running[high_priority]) // if all processes at this priority have terminated, move down a priority until a non empty priority level is found

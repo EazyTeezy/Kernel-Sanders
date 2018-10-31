@@ -25,15 +25,16 @@ void proc1()
 
 while(1){
 
-        while(i < 10000){
+        while(i < 100000){
               i++;
          }
         send_msg('1', MONsrc, UARTq);// send 1s
         i = 0; // resets delay loop counter
 
  //  send_msg('x', MONsrc, UARTq);// send 1s
-       if(!nice_flag)
-         p_nice(4);
+   //
+        if(!nice_flag)
+         p_nice(1);
        // p_terminate();
     }
 
