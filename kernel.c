@@ -16,7 +16,17 @@
 #include "procs.h"
 #include "kernel.h"
 #include "MSGpasser.h"
-
+/*
+ *
+ *
+ *
+ *
+ *                                  Globals
+ *
+ *
+ *
+ *
+ * */
 
 /* here is where the 3 different process table entries are built */
 struct fentry flist[MAX_ENTRIES] = {{proc1, "P1", 8}, {proc2, "P2", 8}, {proc3, "P3", 8}, {idle_proc, "IDL", 8}};
@@ -28,11 +38,34 @@ struct pcb *running[MAX_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL, NULL};
 
 int high_priority = 0;
 
-struct MQ_T MQ_list[MAX_PROCS]; // this is our list of message queues. each queue can be bound to a specific process
+/* this is where the list of message queue information blocks (MQ_list_Entry) reside.All 'inUse' set = FALSE*/
+struct MQ_List_Entry MQ_list[MAX_PROCS] = {{NULL, NULL, FALSE, -1}, {NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1},{NULL, NULL, FALSE, -1}}; // this is our list of message queues. each queue can be bound to a specific process
 // by calling bind()
 
 
+struct MQ_Item * freeMQblock; // used in the meemory allocation of MQ message blocks
+
 int llCount = 0; // the number of items in our linked list (used for debugging purposes)
+
+
+
+
+
+
+
+
+
+/*
+ *
+ *
+ *
+ *
+ *                                          reg_proc() and start()
+ *
+ *
+ *
+ *
+ * */
 
 void reg_proc(char * prc, int pri, int pID){ // this is our argument)
 
@@ -73,14 +106,48 @@ void reg_proc(char * prc, int pri, int pID){ // this is our argument)
 void start(){
     running[high_priority] = running[high_priority]->next; // shifts our running pcb to the right, meaning the first entered process is the first to run
 
+
+    createMQblocks();
    // printList();
     // here we will start the first process
     SVC();
 }
 
+void createMQblocks(){ // allocates memory for the message blocks
+
+    int i = 0; // loop counter
+
+    // struct MQ_Item * freeMQblock; is defined as a global variable
+    struct MQ_Item * prevMQblock;
+
+    while(i < 256){ // we want to allocate memory for 256 message blocks
+
+
+        freeMQblock = malloc(sizeof(struct MQ_List_Entry));
+
+        if(!i) // if the first memory allocation
+            freeMQblock->next = NULL; // the end of the allocated memory blocks
+        else
+            freeMQblock->next = prevMQblock; // connecting the linked list
+
+        prevMQblock = freeMQblock;
+
+        i++; // increment while loop counter (so we have enough space for 256 messages stored at once)
+    }
+
+
+
+}
+
+
 
 
 /*
+ *
+ *
+ *
+ *
+ *
  *          The following functions serve to create our PCBS and add them to our linked list
  *
  */
@@ -140,9 +207,16 @@ void addPCB(struct pcb *PCB, int prio) {
 }
 
 
+
+
+
 /*
+ *
+ *
+ *
  *          The following functions are our processes context switching function
  *          these were provided to us by
+ *
  *
  * */
 
@@ -201,9 +275,13 @@ __asm(" bx  lr");
 return 0;
 }
 
+
 /*
+ *
+ *
  *      These are kernel functions that can be indirectly called within processes
  *      see in SVCHandler for when they get called
+ *
  */
 
 void k_terminater()
@@ -248,24 +326,204 @@ void k_terminater()
 
 void k_nice(int new_priority)// here is where we will remove the running PCB from the current priority linked list, and tack it onto the end of another list
 {
+    //trying to nice something to it's current priority - won't do anything
+    if(high_priority == new_priority)
+        return;
 
     struct pcb *temp; // used when fixing the connections of our linked lists
 
+    if(running[high_priority]->next == running[high_priority]){ //if last item
+        //Reset the previously linked list contents and assign current running process the SP
+        running[high_priority]-> next = running[high_priority]->prev = NULL;
+        running[high_priority]->sp = (struct stack_frame*)get_PSP();
+        //Add the PCB to the new priority list
+        addPCB(running[high_priority],new_priority);
+        //list is empty - running points at NULL
+        running[high_priority] = NULL;
+        // we will then set our new psp
+          while(!running[high_priority]) // if all processes at this priority have terminated, move down a priority until a non empty priority level is found
+              high_priority--;
 
-}
+          set_PSP((unsigned long)running[high_priority]->sp);
+    }
+    else{
+        //Remove PCB from current priority queue
+       if(running[high_priority] != ll_head[high_priority]){ // if its not the last element in this priority
+           running[high_priority]->prev->next = running[high_priority]->next;
+           running[high_priority]->next->prev = running[high_priority] ->prev;
+       }
+       else{
+           ll_head[high_priority]->prev->next = running[high_priority]->next;
+           running[high_priority]->next->prev = ll_head[high_priority]->prev;
+           ll_head[high_priority] = running[high_priority]->next;
+       }
+       if(high_priority >= new_priority)
+           temp = running[high_priority] -> next;
+       else
+           temp = running[high_priority];
 
-void k_bind(int indx)
-{
-    if(MQ_list[indx].avail == TRUE){
-        MQ_list[indx].avail = FALSE;
-        MQ_list[indx].owner = running[high_priority]->id;
+       //Reset the previously linked list contents and assign current running process the SP
+       running[high_priority]-> next = running[high_priority]->prev = NULL;
+       running[high_priority]->sp = (struct stack_frame*)get_PSP();
+       //Add the PCB to the new priority list
+       addPCB(running[high_priority],new_priority);
+       //point to the next item - stored as temp
+       running[high_priority] = temp;
+       if(high_priority >= new_priority)
+           set_PSP((unsigned long)running[high_priority]->sp);
+       free(temp);
     }
 
 
+    //else {
+        //send_msg('z', MONsrc, UARTq);// send 1s
+      //  while(!running[high_priority]) // if all processes at this priority have terminated, move down a priority until a non empty priority level is found
+        //    high_priority--;
+  //  }
+
+
+}
+int k_bind(int indx)
+{
+    int succesfulBind; // succesful or unsucessful flag
+
+    if(MQ_list[indx].inUse == FALSE){ // if the MQ_list
+        MQ_list[indx].inUse = TRUE;
+        MQ_list[indx].owner = running[high_priority]->id;
+        succesfulBind = TRUE; //
+    }
+    else
+        succesfulBind = FALSE;//  we return an error (failed to bind flag)
+
+    return succesfulBind;
 }
 
 
+/*
+ *
+ *
+ *                 kernel-level message passing  support routines
+ *
+ * */
+int k_send(int to_dst, int from, char * msg, int size)
+{
+    int succesfulSend; // dont actually initilize this to a value
 
+    if(!MQ_list[to_dst].inUse) // if the destination mailbox hasnt been binded to
+
+        succesfulSend = FALSE;
+
+    else if(MQ_list[to_dst].owner != to_dst) // if the destination mailbox is owned by the wrong address // this is iffy reasoning figure it out
+
+        succesfulSend = FALSE;
+
+    else{
+
+        struct MQ_Item * MQ_Item_Ptr; // pointer to our new entry in the message queue
+
+        char * k_msg_ptr; // points to the messsage in k_space
+        char * p_msg_ptr; // points to the message in p_space
+        int psz = size; // equal to the size sent in from p_space
+
+        MQ_Item_Ptr = MQmalloc();
+        // null check
+
+        MQ_Item_Ptr -> size = psz; // sets the size to the value sent from p_space
+
+        p_msg_ptr = msg;
+        k_msg_ptr = MQ_Item_Ptr -> msg;
+
+        // now mem copy *pptr into *kptr
+        memcpy(k_msg_ptr, p_msg_ptr, strlen(p_msg_ptr)); // SHOULD THIS STRLEN() BE PPTR OR KPTR
+
+        //add MQ_Item_Ptr to list
+        if(MQ_list[to_dst].youngest == NULL){ // if the list is empty
+
+            MQ_Item_Ptr -> next = NULL;
+
+            MQ_list[to_dst].youngest = MQ_Item_Ptr;
+            MQ_list[to_dst].oldest = MQ_Item_Ptr;
+        }
+        else{ // if there are already waiting messages in the queue
+
+            MQ_Item_Ptr -> next = MQ_list[to_dst].youngest; // sets the new next equal to the old youngest
+            MQ_list[to_dst].youngest = MQ_Item_Ptr; // sets the new youngest equal to our new Item
+        }
+
+    }
+
+
+
+
+    return succesfulSend;
+}
+
+int k_recv(int me, int * src, char * newMsg, int sz)
+{
+
+
+    int succesfulRecv; // dont actually initilize this to a value
+
+
+    if(MQ_list[me].owner == NULL || MQ_list[me].owner != running[high_priority]->id || MQ_list[me].youngest == NULL) // if the calling processes mailbox hasnt been binded to / is improperly owned / has no message waiting
+        succesfulRecv = FALSE;
+    else{
+
+        succesfulRecv = TRUE;
+
+        char * k_msg_ptr; // points to the messsage in k_space
+        char * p_msg_ptr; // points to the message in p_space
+
+        int * k_msgSrc_ptr;
+        int * p_msgSrc_ptr;
+
+        struct MQ_Item * MQ_Item_Ptr;
+        struct MQ_Item * temp;
+
+        MQ_Item_Ptr = MQ_list[me].oldest;
+
+        p_msgSrc_ptr = src;
+        k_msgSrc_ptr = MQ_Item_Ptr -> src;
+
+        // now mem copy *p_msgSrc_ptr into *k_msgSrc_ptr
+       // memcpy(p_msgSrc_ptr, k_msgSrc_ptr, strlen(k_msgSrc_ptr)); // SHOULD THIS STRLEN() BE PPTR OR KPTR
+        p_msgSrc_ptr = k_msgSrc_ptr;
+
+
+        p_msg_ptr = newMsg;
+        k_msg_ptr = MQ_Item_Ptr -> msg;
+
+        // now mem copy *p_msg_ptr into *k_msg_ptr
+        memcpy(p_msg_ptr, k_msg_ptr, strlen(k_msg_ptr)); // SHOULD THIS STRLEN() BE PPTR OR KPTR
+
+        //add MQ_Item_Ptr to list
+
+
+
+        temp = MQ_list[me].oldest;
+        MQ_list[me].oldest = MQ_list[me].oldest -> next;
+
+        MQfree(temp);
+    }
+
+    return succesfulRecv;
+}
+
+struct MQ_Item * MQmalloc(){
+
+    struct MQ_Item * MQp = freeMQblock;
+
+    freeMQblock = freeMQblock->next;
+
+    return MQp;
+}
+
+void MQfree(struct MQ_Item * MQp){
+
+    MQp->next = freeMQblock;
+    freeMQblock = MQp;
+
+}
 
 
 
@@ -279,33 +537,24 @@ void printList(void) // out of date, has not been update to handle priority list
 {
   /*  int i = 0; // facilitates sending the output strings
     int k = 0; // facilitates moving to the next PCB
-
     char strA [300];
     char strB [200];
-
     while (k < llCount) {
-
        unsigned long  r0_ptr = ((unsigned long)running->sp + (unsigned long)(R0_OFFSET * sizeof(unsigned long))); // this points to our r0 location in memory
        unsigned long  pc_ptr = ((unsigned long)running->sp + (unsigned long)(PC_OFFSET * sizeof(unsigned long))); // this points to our pc location in memory
        unsigned long  psr_ptr = ((unsigned long)running->sp + (unsigned long)(PSR_OFFSET * sizeof(unsigned long))); // this points to our psr location in memory
-
        struct stack_frame *spp = (running->sp); // this points to the running processes stack_fram struct
-
        sprintf(strA, "\n\n---------------------\n\nLinked List Entry:    %d\nProcess ID:     %d\n\nreg  @   mem loc     =   value", k+1, running->id);
        sprintf(strB, "\n\nr0   @   %u   =   %u \npc   @   %u   =   %u \npsr  @   %u   =   %u", r0_ptr, (unsigned long)spp->r0, pc_ptr, (unsigned long)spp->pc, psr_ptr, (unsigned long)spp->psr );
-
         while(i < strlen(strA)){
             send_msg(strA[i], MONsrc, UARTq); // sends the process title string
            i++;
         } i = 0;
-
         while(i < strlen(strB)){
             send_msg(strB[i], MONsrc, UARTq); // sends the registers and their values
             i++;
         } i = 0;
-
         running = running->next; // prints out our first one first
-
          k++;
      }
      */

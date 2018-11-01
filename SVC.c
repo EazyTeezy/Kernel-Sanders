@@ -128,15 +128,20 @@ void SVCHandler(struct stack_frame *argptr)
             kcaptr -> rtnvalue = running[high_priority]->id;
         break;
         case BIND:
-            k_bind(kcaptr -> arg1);
+            kcaptr -> rtnvalue = k_bind(kcaptr -> arg1); // this calls the bind function in kernel and returns TRUE for sucessful bind and FALSE for failed bind
         break;
         case NICE:
         //    kcaptr -> rtnvalue = -1; // probably not -1. should nice return something?
             k_nice(kcaptr -> arg1);
         break;
         case TERMINATE:
-           // kcaptr -> rtnvalue = -1; // probably not -1. should terminate return something?
             k_terminater(); // this function will deallocate the stk and PCB
+        break;
+        case SEND:
+             kcaptr -> rtnvalue =  k_send(kcaptr -> arg1, kcaptr -> arg2, kcaptr -> arg3, kcaptr -> arg4); // this function will facilitate the sending of messages;
+        break;
+        case RECV:
+            kcaptr -> rtnvalue = k_recv(kcaptr -> arg1, kcaptr -> arg5, kcaptr -> arg3, kcaptr -> arg4); // this function will deallocate the receiving of messages
         break;
         default:
             kcaptr -> rtnvalue = -1;

@@ -17,39 +17,73 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+int nice_flag = 0;
 
-void proc1()
+void proc1() // During development this process acts primarily as a never ending process which prints 1s
 {
-    int i = 0; // delay loop counter
+    //int i = 0; // delay loop counter
+    int worked;
+    char * p1message = "12345";
 
-   while(1){
+    p_send(2, 1, p1message, 5);
 
-        while(i < 1000000){
+
+    worked = p_bind(1);
+
+    if(worked)
+        send_msg('s', MONsrc, UARTq);
+    else
+        send_msg('f', MONsrc, UARTq);
+
+
+/*while(1){
+
+        while(i < 100000){
               i++;
          }
-        send_msg('1', MONsrc, UARTq);// send 1s
-        i = 0; // resets delay loop counter
-    }
-      //   p_terminate();
+      */  send_msg('1', MONsrc, UARTq);// send 1s
+      /*  i = 0; // resets delay loop counter
 
+ //  send_msg('x', MONsrc, UARTq);// send 1s
+   //
+        if(!nice_flag)
+         p_nice(1);
+       // p_terminate();
+    }*/
+    //while(1){
 
+   // }
+      p_terminate();
 }
 
 void proc2()
 {
 
-
     int j = 0;// delay loop counter
 
+    int incomingMsgSrc; // memory location on this processeses stack for incoming message source
+    char incomingMsg[5]; // memory location on this processeses stack for incoming message
 
+    int worked;
+
+    worked = p_bind(2);
   //  while(1){
 
-        while(j < 1000000){
+    if(worked)
+        send_msg('s', MONsrc, UARTq);
+    else
+        send_msg('f', MONsrc, UARTq);
+
+
+    p_recv(6, &incomingMsgSrc, &incomingMsg, 5); // 5 because thats what the incoming message is
+
+               while(j < 10000){
             j++;
         } j = 0;  // resets delay loop counter
 
         send_msg('2', MONsrc, UARTq);// send 2s
  //   }
+       // p_nice(3);
         p_terminate();
 
 }
@@ -66,7 +100,7 @@ void proc3() // currently is the get_id process
     int i = 0; // delay loop counter
 
    // while(1){
-       while(i < 1000000){
+       while(i < 10000){
             i++;
        }
         send_msg(strID[0], MONsrc, UARTq);
@@ -123,6 +157,9 @@ void idle_proc() // currently is the get_id process
 }
 
 
+
+
+
 /*
  *
  *  Process functions
@@ -167,16 +204,16 @@ void p_nice(int incr)
 
     /* Assign address of getidarg to R7 */
     p_assignR7((unsigned long) &niceArg);
-
+    //nice_flag = 1;
     SVC();
 
 }
 
-void p_bind(int index)
+int p_bind(int index) // return value used as success or failure flag
 {
 
     volatile struct kcallargs bindArg; /* Volatile to actually reserve space on stack*/
-    bindArg.code = NICE;
+    bindArg.code = BIND;
     bindArg.arg1 = index;
 
     /* Assign address of getidarg to R7 */
@@ -184,6 +221,43 @@ void p_bind(int index)
 
     SVC();
 
+    return bindArg.rtnvalue;
+
+}
+
+int p_send(int to, int from, char * msg, int size){
+
+    volatile struct kcallargs sendArg; /* Volatile to actually reserve space on stack*/
+    sendArg.code = SEND;
+    sendArg.arg1 = to;
+    sendArg.arg2 = from;
+    sendArg.arg3 = msg;
+    sendArg.arg4 = size;
+
+        /* Assign address of getidarg to R7 */
+        p_assignR7((unsigned long) &sendArg);
+
+        SVC();
+
+        return sendArg.rtnvalue;
+
+}
+
+int p_recv(int my_mailbox, int * from, char * msg, int sz){
+
+    volatile struct kcallargs recvArg; /* Volatile to actually reserve space on stack*/
+    recvArg.code = RECV;
+    recvArg.arg1 = my_mailbox;
+    recvArg.arg5 = from;
+    recvArg.arg3 = msg;
+    recvArg.arg4 = sz;
+
+            /* Assign address of getidarg to R7 */
+    p_assignR7((unsigned long) &recvArg);
+
+    SVC();
+
+    return recvArg.rtnvalue;
 }
 
 

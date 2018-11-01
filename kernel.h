@@ -118,27 +118,32 @@ struct pcb
     struct pcb *prev;
 };
 
+
+
+
+
+
 /*
  *
- *
  *      Message Passing Structures
- *
  *
  * */
 
 struct MQ_Item
 {
-    char msg; /*  not sure what data type this needs to be */
-    int src; /* senders process id*/
+    char msg[256];
+
+    int * src; /* senders process id*/
     int size;
+    struct MQ_Item *next;
 };
 
-struct MQ_T
+struct MQ_List_Entry
 {
-    struct MQ_Item *tail; // indicates the last item in the message queue
-    struct MQ_Item *head; // indicates the first item in the message queue
+    struct MQ_Item *youngest; // indicates the last item in the message queue
+    struct MQ_Item *oldest; // indicates the first item in the message queue
 
-    int avail;
+    int inUse;
     int owner;
 
 
@@ -162,8 +167,15 @@ extern int high_priority;
 
 void k_terminater();
 void k_nice(int new_priority);
-void k_bind(int indx);
+int k_bind(int indx);
 
+int k_send(int to_dst, int from, char * msg, int size);
+int k_recv();
+
+struct MQ_Item * MQmalloc();
+void MQfree(struct MQ_Item * MQp);
+
+void createMQblocks(); //
 
 
 #endif /* KERNEL_H_ */
