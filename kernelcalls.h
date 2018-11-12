@@ -8,14 +8,51 @@
 #ifndef KERNELCALLS_H_
 #define KERNELCALLS_H_
 
-enum kernelcallcodes {GETID, NICE, TERMINATE, BIND};
+typedef enum {GETID, NICE, TERMINATE, BIND, SEND, RECV, UART_OUT_CH} kernelcallcodes;
 
-struct kcallargs
+/*
+ *          This structure is the shared memory between pspace and kspace
+ */
+
+struct pkargs
 {
-    unsigned int code;
+    int code;
     unsigned int rtnvalue;
-    unsigned int arg1;
-    unsigned int arg2;
+    void * ptr_to_structure; // this contains the message callers specific parameters (e.g. send has to from msg sz)
+
+};
+
+
+/*
+ *          The following structure are pointed to by an sub data type within the above structure
+ */
+
+struct pkSend // a pointer to an element of this type exists within pkargs
+{
+    int to;
+    int from;
+    char * msg;
+    int size;
+};
+
+struct pkRecv // a pointer to an element of this type exists within pkargs
+{
+
+    int my_mailbox;
+    int * from;
+    char * msg;
+    int size;
+};
+
+struct CUPch
+{
+    char esc;
+    char sqrbrkt;
+    char line[2];   /* 01 through 24 */
+    char semicolon;
+    char col[2];    /* 01 through 80 */
+    char cmdchar;
+    char ch;
 };
 
 

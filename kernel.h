@@ -16,14 +16,16 @@ void start();
 
 #define DISPLAYTBL_LEN1          63
 #define DISPLAYTBL_LEN2          90
-#define MAX_ENTRIES     4 // this is the number of different unique prcesses types in our table (proc1, proc2, proc3)
+#define MAX_ENTRIES     13 // this is the number of different unique prcesses types in our table (proc1, proc2, proc3)
 
-#define MAX_PROCS       10 // the max number of processes thst can be run at once
+#define MAX_MAILBOXES       16 // the max number of process mailboxes
 
-#define MONq    0 // these are used to indicate what Q to enter
-#define UARTq    1
+#define TO_UART     14 // find a way to make this MAX_MAILBOXES - 2 rather than 8
+#define TO_MON      15 // find a way to make this MAX_MAILBOXES - 1 rather than 9
 
-#define MONsrc      3
+#define ONE_CHAR    1
+#define UART_SRC    0
+
 
 #define PSTACKSZ        512
 #define THUMBMODE       0x01000000
@@ -118,27 +120,32 @@ struct pcb
     struct pcb *prev;
 };
 
+
+
+
+
+
 /*
  *
- *
  *      Message Passing Structures
- *
  *
  * */
 
 struct MQ_Item
 {
-    char msg; /*  not sure what data type this needs to be */
-    int src; /* senders process id*/
+    char msg[256];
+
+    int * src; /* senders process id*/
     int size;
+    struct MQ_Item *next;
 };
 
-struct MQ_T
+struct MQ_List_Entry
 {
-    struct MQ_Item *tail; // indicates the last item in the message queue
-    struct MQ_Item *head; // indicates the first item in the message queue
+    struct MQ_Item *youngest; // indicates the last item in the message queue
+    struct MQ_Item *oldest; // indicates the first item in the message queue
 
-    int avail;
+    int inUse;
     int owner;
 
 
@@ -162,8 +169,22 @@ extern int high_priority;
 
 void k_terminater();
 void k_nice(int new_priority);
-void k_bind(int indx);
+int k_bind(int indx);
 
+int k_send(int to_dst, int from, char * msg, int size);
+int k_recv();
+
+
+int k_uart_organizer(char ch, char cmdchar, char col1, char col2, char esc, char line1, char line2, char semicolon, char sqrbrkt);
+
+int k_uart_send(char output);
+int k_uart_recv(char *d, int *s);
+
+struct MQ_Item * MQmalloc();
+void MQfree(struct MQ_Item * MQp);
+
+void createMQblocks(); //
+void init_MQ_list();
 
 
 #endif /* KERNEL_H_ */

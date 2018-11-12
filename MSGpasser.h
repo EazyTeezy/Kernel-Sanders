@@ -10,7 +10,7 @@
 
 #define MAX_Q_SIZE  4096
 #define EMPTY_FLAG  -1
-#define MAX_ENTRIES  4
+#define MAX_ENTRIES  13
 
 #define MONq    0 // these are used to indicate what Q to enter, or from where it has come
 #define UARTq    1

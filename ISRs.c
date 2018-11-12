@@ -72,26 +72,57 @@ void UART0_IntHandler(void)
     {
         /* RECV done - clear interrupt and make char available to application */
         UART0_ICR_R |= UART_INT_RX;
+
         Data = UART0_DR_R;
+
+        data_ptr = &Data; // here we assign a ptr to our data value as our k_send function requires a char pointer as a parameter
+
 
         /* going to want to enqueue data into a FIFO queue */
         /* this will be done by calling a function like 'send_msg()'*/
-        send_msg(Data, UARTsrc, MONq); //UARTsrc defined in ISRoutines.h, other option is CLOCKsrc
+        k_send(TO_MON, UART_SRC, data_ptr, ONE_CHAR);
+
     }
 
     if (UART0_MIS_R & UART_INT_TX)
     {
-
         /* XMIT done - clear interrupt */
         UART0_ICR_R |= UART_INT_TX;
 
-        if(rec_msg(&dta, &sourc, UARTq)){ // this checks to see if there's anything waiting for us in the to UART queue
+
+        /*-----------------------------------------------------------------------------*/
+        /* The following is an outline of the four arguments being received             */
+        /* by this process from its queue. The four arguments are as follows            */
+        /*                                                                              */
+        /*      arg 1: the message queue from which to receive our message              */
+        /*      arg 2: pointer to the location for the message source to be stored      */
+        /*              (not needed in this scope)                                       */
+        /*      arg 3: pointer to the location for the message to be stored             */
+        /*      arg 4: the size of the message to be recieved                           */
+        /*                                                                              */
+        /*       note: the return value is TRUE if the msg was succesfully recvd        */
+        /*        and FALSE if the msg was not succesfully recvd                        */
+        /*------------------------------------------------------------------------------*/
+
+        // this is the new way
+
+        if(k_uart_recv(&dta, &src)){ // this checks to see if there's anything waiting for us in the to UART queue
+
+            /* this is where we will use all the information about position to output the character to the correct place on the screen*/
             UART0_DR_R = dta;
         }
         else{
             UartOutIdle = TRUE;
         }
+
     }
+}
+
+
+void UART_sendChar(char CharToUart)
+{
+    UART0_DR_R = CharToUart;
+    UartOutIdle = FALSE;
 }
 
 void InterruptMasterEnable(void)
@@ -100,11 +131,6 @@ void InterruptMasterEnable(void)
     __asm(" cpsie   i");
 }
 
-void UART_sendChar(char CharToUart)
-{
-    UART0_DR_R = CharToUart;
-    UartOutIdle = FALSE;
-}
 
 /* SYSTICK */
 

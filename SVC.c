@@ -72,7 +72,12 @@ void SVCHandler(struct stack_frame *argptr)
        Handler mode and uses the MSP
      */
     static int firstSVCcall = TRUE;
-    struct kcallargs *kcaptr;
+
+    struct pkargs *kcaptr; // points at our shared memory between p and k space
+
+    struct pkSend *pkSptr; // points at the structure referred to in pkargs
+    struct pkRecv *pkRptr; // points at the structure referred to in pkargs
+    struct CUPch *pkUsend; // points at the structure referred to in pkargs
 
     if (firstSVCcall)
     {
@@ -121,22 +126,34 @@ void SVCHandler(struct stack_frame *argptr)
      */
 
     //#ifdef FOR_KERNEL_ARGS
-        kcaptr = (struct kcallargs *) argptr -> r7;
+        kcaptr = (struct pkargs *) argptr -> r7;
+
         switch(kcaptr -> code)
         {
         case GETID:
             kcaptr -> rtnvalue = running[high_priority]->id;
         break;
         case BIND:
-            k_bind(kcaptr -> arg1);
+            kcaptr -> rtnvalue = k_bind(*(int*)kcaptr -> ptr_to_structure); // this calls the bind function in kernel and returns TRUE for sucessful bind and FALSE for failed bind
         break;
         case NICE:
-        //    kcaptr -> rtnvalue = -1; // probably not -1. should nice return something?
-            k_nice(kcaptr -> arg1);
+            k_nice(*(int*)kcaptr -> ptr_to_structure);
         break;
         case TERMINATE:
-           // kcaptr -> rtnvalue = -1; // probably not -1. should terminate return something?
+
             k_terminater(); // this function will deallocate the stk and PCB
+        break;
+        case SEND:
+            pkSptr = kcaptr -> ptr_to_structure;
+            kcaptr -> rtnvalue =  k_send(pkSptr->to, pkSptr->from, pkSptr->msg, pkSptr->size); // this function will facilitate the sending of messages;
+        break;
+        case RECV:
+            pkRptr = kcaptr -> ptr_to_structure;
+            kcaptr -> rtnvalue = k_recv(pkRptr->my_mailbox, pkRptr->from, pkRptr->msg, pkRptr->size); // this function will facilitate the receiving of messages
+        break;
+        case UART_OUT_CH:
+            pkUsend = kcaptr -> ptr_to_structure;
+            kcaptr -> rtnvalue = k_uart_organizer(pkUsend->ch, pkUsend->cmdchar, pkUsend->col[0], pkUsend->col[1], pkUsend->esc, pkUsend->line[0], pkUsend->line[1], pkUsend->semicolon, pkUsend->sqrbrkt);
         break;
         default:
             kcaptr -> rtnvalue = -1;

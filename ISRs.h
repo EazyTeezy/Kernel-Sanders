@@ -89,16 +89,20 @@ void UART_sendChar(char CharToUart); // facilitates sending characters to the UA
 volatile int elapsed;
 
 /* Globals */
-volatile char Data;     /* Input data from UART receive */
+char Data;     /* Input data from UART receive */
+char * data_ptr;
 
 extern int UartOutIdle; // memory location for Uart idle status
 
+
+#define MAX_MSG_SIZE    5
+
 char dta;
+int src;
+
 int sourc;
 
 /* my defines */
-#define UARTsrc    1 // these are used as source IDS
-#define CLOCKsrc    2
 
 #define MONq    0 // these are used to indicate what Q to enter or extract from
 #define UARTq   1

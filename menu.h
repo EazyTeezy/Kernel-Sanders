@@ -28,7 +28,7 @@
 #define MONsrc      3
 
 
-#define BACKSPACE       0x7f
+//#define BACKSPACE       0x7f
 #define ESC             27
 
 #define STARTFLAG       -1
